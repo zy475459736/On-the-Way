@@ -1,3 +1,5 @@
+[原文](http://gee.cs.oswego.edu/dl/cpjslides/nio.pdf)
+
 # 目录
 
 * 可扩展的网络服务
@@ -26,7 +28,9 @@
 
 ![](https://raw.githubusercontent.com/zy475459736/markdown-pics/master/Scalable_IO_in_Java/classic%20service%20designs.png)
 
-一个handler对应一个线程
+一个handler对应一个线程。
+
+
 
 ###  传统的ServerSocket 循环
 
