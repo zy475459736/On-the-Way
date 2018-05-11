@@ -4,11 +4,13 @@
 
 执行所提交的Runnable 任务。
 
-将 **任务的提交** 和 **任务的执行** 解耦。
+**好处：**
 
-任务的执行机制包括：线程的使用、调度等。
+* 将 **任务的提交** 和 **任务的执行** 解耦。
 
-使用Executor后也不用再显示地创建线程。
+> 任务的执行机制包括：线程的使用、调度等。
+
+* 使用Executor后也不用再显示地创建线程。
 
 
 
@@ -23,9 +25,7 @@ implements Executor
 主要提供如下和 **任务管理** 功能 相关的方法：
 
 * 停止
-* 跟踪一个或者多个异步任务的进度（通过Future）
-
-
+* submit()方法返回Future，以此来跟踪异步任务的进度
 
 
 
@@ -37,7 +37,7 @@ implements ExecutorService
 
 ![](https://github.com/zy475459736/markdown-pics/blob/master/Diagrams/AbstractExecutorService.png?raw=true)
 
-ExecutorService的默认实现：使用newTaskFor()方法返回一个FutureTask（RunnabeFuture的默认实现类）来实现submit()、invokeAny()、invokeAll()方法。
+**ExecutorService的默认实现**：使用newTaskFor()方法返回一个FutureTask（RunnabeFuture的默认实现类）来实现submit()、invokeAny()、invokeAll()方法。
 
 子类可重写newTaskFor()方法。
 
@@ -66,9 +66,9 @@ implements ExecutorService
 
 和Runnable类似，不同之处仅在于：会**返回任务运行后的结果**
 
-> 该结构：
+> 需要注意，所返回的结果：
 >
-> 1、由范性来定义
+> 1、由泛型来定义
 >
 > 2、可能是个异常
 
@@ -78,9 +78,11 @@ implements ExecutorService
 
 ![](https://github.com/zy475459736/markdown-pics/blob/master/Diagrams/Future.png?raw=true)
 
-Future代表了异步计算的结果。
+Future代表了异步计算的结果或者说状态：
 
-如果调用get()方法时，计算还没有完成，就会block在该方法上。
+* 完成（isDone()返回true，get()返回结果，isCancelled...）
+* 取消（isCancelled返回true）
+* 正在计算中（get()阻塞）
 
 
 
