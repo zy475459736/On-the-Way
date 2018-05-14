@@ -74,6 +74,8 @@ EventLoop的职责是处理所有注册到本线程多路复用器Selector上的
 
 除了网络IO事件外，同时还处理用户自定义的Task和定时任务Task。
 
+
+
 #### NioServerSocketChannel
 
 > 类比NIO类库中的Channel，或者说ServerSocketChannel
@@ -81,6 +83,8 @@ EventLoop的职责是处理所有注册到本线程多路复用器Selector上的
 用户并不关系底层的实现细节和工作原理，因此只需通过ServerBootStrap的channel方法直接制定服务端Channel的类型即可。
 
 Netty通过工厂类，利用反射完成Channel对象的创建。
+
+
 
 #### ChannelPipeline
 
