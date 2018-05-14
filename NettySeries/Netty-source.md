@@ -144,6 +144,10 @@ public T newChannel() {
 - 生成的 Channel 的具体类型是 NioSocketChannel. 
   Channel 的实例化过程, 其实就是调用的 ChannelFactory#newChannel 方法, 而实例化的 Channel 的具体的类型又是和在初始化 Bootstrap 时传入的 channel() 方法的参数相关. 
 
+
+
+
+
 ##### Channel 实例化
 
 前面已经知道了如何确定一个 Channel 的类型, 并且了解到 Channel 是通过工厂方法 ChannelFactory.newChannel() 来实例化的, 那么 ChannelFactory.newChannel() 方法在哪里调用呢?
@@ -227,7 +231,9 @@ protected AbstractChannel(Channel parent) {
 }
 ```
 
-到这里, 一个完整的 NioSocketChannel 就初始化完成了, 
+到这里, 一个完整的 NioSocketChannel 就初始化完成了。
+
+
 
 ##### NioSocketChannel初始化小节
 
@@ -252,6 +258,10 @@ protected AbstractChannel(Channel parent) {
   - pipeline 是 new DefaultChannelPipeline(this) 新创建的实例. 
 
     `这里体现了:Each channel has its own pipeline and it is created automatically when a new channel is created.`
+
+
+
+
 
 #### 关于 unsafe 字段的初始化
 
