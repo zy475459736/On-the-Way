@@ -48,17 +48,22 @@ selector 是 NIO 中才有的概念, 它是 Java NIO 之所以可以非阻塞地
 - SocketChannel, TCP 操作
 - ServerSocketChannel, TCP 操作, 使用在服务器端.
 
+### FileChannel
+
+用于文件的Channel，可以通过其对文件进行读写，**注意**：FileChannel不能设置为非阻塞模式。
+
 例子：
 
 ```java
 public static void main( String[] args ) throws Exception
 {
+	//打开 FileChannel
     RandomAccessFile aFile = new RandomAccessFile("/Users/settings.xml", "rw");
     FileChannel inChannel = aFile.getChannel();
-
+	//从 FileChannel 中读取数据
     ByteBuffer buf = ByteBuffer.allocate(48);
-
     int bytesRead = inChannel.read(buf);
+    
     while (bytesRead != -1) {
         buf.flip();
 
@@ -71,26 +76,6 @@ public static void main( String[] args ) throws Exception
     }
     aFile.close();
 }
-```
-
-
-
-#### FileChannel
-
-用于文件的Channel，可以通过其对文件进行读写，**注意**：FileChannel不能设置为非阻塞模式。
-
-##### 打开 FileChannel
-
-```java
-RandomAccessFile aFile     = new RandomAccessFile("test.txt", "rw");
-FileChannel      inChannel = aFile.getChannel();
-```
-
-##### 从 FileChannel 中读取数据
-
-```java
-ByteBuffer buf = ByteBuffer.allocate(48);
-int bytesRead = inChannel.read(buf);
 ```
 
 ##### 写入数据
@@ -170,6 +155,8 @@ while(! socketChannel.finishConnect() ){
 在异步模式下, 读写的方式是一样的.
 在读取时, 因为是异步的, 因此我们必须检查 read 的返回值, 来判断当前是否读取到了数据.
 
+
+
 ### ServerSocketChannel
 
 ServerSocketChannel 顾名思义, 是用在服务器为端的, 可以监听客户端的 TCP 连接, 例如:
@@ -227,6 +214,10 @@ while(true){
         }
 }
 ```
+
+
+
+
 
 ### DatagramChannel
 
@@ -287,6 +278,8 @@ Buffer 其实就是一块内存区域, 我们可以在这个内存区域中进�
 - ShortBuffer
   这些 Buffer 覆盖了能从 IO 中传输的所有的 Java 基本数据类型.
 
+
+
 ### Buffer 的基本使用
 
 使用Buffer 的步骤如下:
@@ -340,6 +333,8 @@ public class Test {
 
 `limit - position 表示此时还可以写入/读取多少单位的数据.`
 例如在写模式, 如果此时 limit 是10, position 是2, 则表示已经写入了2个单位的数据, 还可以写入 10 - 2 = 8 个单位的数据.
+
+
 
 ### 分配 Buffer
 
@@ -398,7 +393,7 @@ Buffer.rewind()方法可以重置 position 的值为0, 因此我们可以重新�
 我们可以通过调用 Buffer.mark()将当前的 position 的值保存起来, 随后可以通过调用 Buffer.reset()方法将 position 的值回复回来.
 例如:
 
-```
+```java
 public class Test {
     public static void main(String[] args) {
         IntBuffer intBuffer = IntBuffer.allocate(2);
@@ -540,9 +535,9 @@ SelectionKey key = channel.register(selector, SelectionKey.OP_READ);
 注意到, 在使用 Channel.register()方法时, 第二个参数指定了我们对 Channel 的什么类型的事件感兴趣, 这些事件有:
 
 - Connect, 即连接事件(TCP 连接), 对应于SelectionKey.OP_CONNECT
-- Accept, 即确认事件, 对应于SelectionKey.OP_ACCEPT
-- Read, 即读事件, 对应于SelectionKey.OP_READ, 表示 buffer 可读.
-- Write, 即写事件, 对应于SelectionKey.OP_WRITE, 表示 buffer 可写.
+- Accept, 即确认事件,                     对应于SelectionKey.OP_ACCEPT
+- Read, 即读事件,                            对应于SelectionKey.OP_READ, 表示 buffer 可读.
+- Write, 即写事件,                           对应于SelectionKey.OP_WRITE, 表示 buffer 可写.
 
 一个 Channel发出一个事件也可以称为 **对于某个事件, Channel 准备好了**. 因此一个 Channel 成功连接到了另一个服务器也可以被称为 **connect ready**.
 我们可以使用或运算**|**来组合多个事件, 例如:
@@ -759,10 +754,6 @@ public class NioEchoServer {
     }
 }
 ```
-
-
-
-
 
 
 
