@@ -9,10 +9,12 @@
 * 事件监听
 * SpringFactoriesLoader详解
 
+
+
 > Spring Boot 框架的**初衷**：**快速地启动Spring应用**
 >
 >
-> Spring Boot应用本质上就是一个 **基于Spring框架** 的应用, 它是Spring对" **约定优先于配置** "理念的最佳实践产物
+> Spring Boot应用本质上就是一个 **基于Spring框架** 的应用, 它是对 Spring" **约定优先于配置** "理念的最佳实践产物
 >
 
 
@@ -23,20 +25,30 @@ Spring Boot最重要的**四大核心**：
 * Actuator
 * 命令行界面
 
+
+
 ## 探索Spring IoC容器
 ### Spring IoC容器
-BeanDefinition：对Bean的具体定义
 
-BeanDefinitionRegistry和BeanFactory存储了BeanDefinition：
+#### BeanDefinition、BeanDefinitionRegistry & BeanFactory 概念和关系
 
-* BeanDefinitionRegistry抽象出bean的注册逻辑，
-* BeanFactory则抽象出了bean的管理逻辑，
+<u>BeanDefinition</u>：Bean的具体定义
+
+<u>BeanDefinitionRegistry和BeanFactory</u>存储了BeanDefinition：
+
+* BeanDefinitionRegistry抽象出bean的**注册**逻辑，
+* BeanFactory                  抽象出bean的**管理**逻辑，
 
 而各个BeanFactory的实现类就具体承担了bean的注册以及管理工作。它们之间的关系就如下图：
 
 ![image](https://raw.githubusercontent.com/zy475459736/markdown-pics/master/SpringBoot_List/spring_1.png)
 
 DefaultListableBeanFactory作为一个比较通用的BeanFactory实现，它同时也实现了BeanDefinitionRegistry接口，因此它就承担了Bean的注册管理工作。
+
+
+
+#### 示例代码
+
 ```java
 //这段代码仅为了说明BeanFactory底层的大致工作流程，实际情况会更加复杂，比如bean之间的依赖关系可能定义在外部配置文件(XML/Properties)中、也可能是注解方式
 
@@ -55,12 +67,19 @@ beanRegistry.registerBeanDefinition("beanName",definition);
 BeanFactory container = (BeanFactory)beanRegistry;
 Business business = (Business)container.getBean("beanName");
 ```
-Spring IoC容器的整个工作流程大致可以氛围两个阶段：
-1. **容器启动阶段**    ---->   **加载Configuration MetaData**。
+
+
+#### IoC容器二阶段工作流程
+
+Spring IoC容器的整个工作流程大致可以分为两个阶段。（类似于初始化和实例化）
+
+##### 容器启动阶段----> 加载Configuration MetaData
 
 BeanDefinitionReader会对加载的Configuration MetaData进行解析和分析，并将分析后的信息组装为相应的BeanDefinition，最后把这些保存了bean定义的BeanDefinition，注册到相应的BeanDefinitionRegistry，这样容器的启动工作就完成了。
 
-这个阶段主要完成一些准备性工作，更侧重于bean对象管理信息的收集，当然一些验证性或者辅助性的工作也在这一阶段完成。
+这个阶段主要完成一些准备性工作，更侧重于**<u>bean对象管理信息**的收集</u>。
+
+当然一些验证性或者辅助性的工作也在这一阶段完成。
 
 下面的代码将模拟BeanFactory如何从xml配置文件中加载bean的定义以及依赖关系：
 ```java
@@ -75,9 +94,19 @@ beanDefinitionReader.loadBeanDefinitions("classpath:spring-bean.xml");
 BeanFactory container = (BeanFactory)beanRegistry;
 Business business = (Business)container.getBean("beanName");
 ```
-2. **Bean的实例化阶段**
+##### Bean的实例化阶段
 
-经过第一阶段，所有bean定义都通过BeanDefinition的方式注册到BeanDefinitionRegistry中，当某个请求通过容器的getBean方法请求某个对象，或者因为依赖关系容器需要隐式的调用getBean时，就会触发第二阶段的活动：容器会首先检查所请求的对象之前是否已经实例化完成。如果没有，则会根据注册的BeanDefinition所提供的信息实例化被请求对象，并为其注入依赖。当该对象装配完毕后，容器会立即将其返回给请求方法使用。
+经过第一阶段，所有bean定义都通过BeanDefinition的方式注册到BeanDefinitionRegistry中。
+
+当
+
+1. 某个请求通过容器的getBean方法请求某个对象，
+
+2. 或者因为依赖关系容器需要隐式的调用getBean，
+
+   就会触发**第二阶段的活动**：
+
+   容器会首先检查所请求的对象之前是否已经实例化完成。如果没有，则会根据注册的BeanDefinition所提供的信息实例化被请求对象，并为其注入依赖。当该对象装配完毕后，容器会立即将其返回给请求方法使用。
 
 
 
@@ -86,24 +115,47 @@ Business business = (Business)container.getBean("beanName");
 另外一种使用更多的容器：**ApplicationContext**，它构建在BeanFactory之上，属于更高级的容器，除了具有BeanFactory的所有能力之外，还提供对事件监听机制以及国际化的支持等。它管理的bean，**在容器启动时全部完成初始化和依赖注入操作**。
 
 
+
+
 ### Spring容器扩展机制
 
 IoC容器负责管理容器中所有bean的生命周期，而在bean生命周期的不同阶段，Spring提供了不同的扩展点来改变bean的命运。
+
+* BeanFactoryPostProcessor
+
+  在容器实例化相应对象之前，对beandefinition做一些额外的操作
+
+* BeanPostProcessor
+
+  在容器实例化相应对象之后，对BeanDefinition做一些额外的操作
+
+简单的对比，**BeanFactoryPostProcessor处理bean的定义，而BeanPostProcessor则处理bean完成实例化后的对象**。
+
+Bean的整个生命周期：
+![image](https://raw.githubusercontent.com/zy475459736/markdown-pics/master/SpringBoot_List/spring_2.png)
+
+#### BeanFactoryPostProcessor
 
 在容器的启动阶段，**BeanFactoryPostProcessor**允许我们在**容器实例化相应对象**之前，对注册到容器的BeanDefinition所保存的信息做一些额外的操作，比如修改bean定义的某些属性或者增加其他信息等，这需要的步骤如下：
 
 1、需要实现org.springframework.beans.factory.config.BeanFactoryPostProcessor接口，
 2、需要实现org.springframework.core.Ordered接口，以保证BeanFactoryPostProcessor按照顺序执行
 
+##### BeanFactoryPostProcessor示例----PropertyPlaceholderConfigurer
+
 Spring提供了为数不多的BeanFactoryPostProcessor实现，我们以**PropertyPlaceholderConfigurer**来说明其大致的工作流程。
 
 在Spring项目的XML配置文件中，经常可以看到许多配置项的值使用占位符，而将占位符所代表的值单独配置到独立的properties文件，这样可以将散落在不同XML文件中的配置集中管理，而且也方便运维根据不同的环境进行配置不同的值。这个非常实用的功能就是由PropertyPlaceholderConfigurer负责实现的。
 
-根据前文，当BeanFactory在第一阶段加载完所有配置信息时，BeanFactory中保存的对象的属性还是以占位符方式存在的，比如${jdbc.mysql.url}。当PropertyPlaceholderConfigurer作为BeanFactoryPostProcessor被应用时，它会使用properties配置文件中的值来替换相应的BeanDefinition中占位符所表示的属性值。当需要实例化bean时，bean定义中的属性值就已经被替换成我们配置的值。当然其实现比上面描述的要复杂一些，这里仅说明其大致工作原理，更详细的实现可以参考其源码。
+根据前文，当BeanFactory在第一阶段加载完所有配置信息时，BeanFactory中保存的对象的属性还是以占位符方式存在的，比如${jdbc.mysql.url}。
+
+当PropertyPlaceholderConfigurer作为BeanFactoryPostProcessor被应用时，它会使用properties配置文件中的值来替换相应的BeanDefinition中占位符所表示的属性值。当需要实例化bean时，bean定义中的属性值就已经被替换成我们配置的值。当然其实现比上面描述的要复杂一些，这里仅说明其大致工作原理，更详细的实现可以参考其源码。
+
+
+
+#### BeanPostProcessor
 
 与之相似的，还有**BeanPostProcessor**，其存在于对象实例化阶段。跟BeanFactoryPostProcessor类似，它会处理容器内所有符合条件并且已经实例化后的对象。
-
-简单的对比，**BeanFactoryPostProcessor处理bean的定义，而BeanPostProcessor则处理bean完成实例化后的对象**。
 
 BeanPostProcessor定义了两个接口：
 ```java
@@ -114,13 +166,20 @@ public interface BeanPostProcessor {
     Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException;
 }
 ```
-为了理解这两个方法执行的时机，简单的了解下bean的整个生命周期：
-![image](https://raw.githubusercontent.com/zy475459736/markdown-pics/master/SpringBoot_List/spring_2.png)
+这两个方法中都传入了bean对象实例的引用，为扩展容器的对象实例化过程提供了很大便利，在这儿几乎可以对传入的实例执行任何操作。
 
+<u>** 注解、AOP ** 等功能的实现均大量使用了BeanPostProcessor。</u>
 
-postProcessBeforeInitialization()方法与postProcessAfterInitialization()分别对应图中前置处理和后置处理两个步骤将执行的方法。这两个方法中都传入了bean对象实例的引用，为扩展容器的对象实例化过程提供了很大便利，在这儿几乎可以对传入的实例执行任何操作。注解、AOP等功能的实现均大量使用了BeanPostProcessor，比如有一个自定义注解，你完全可以实现BeanPostProcessor的接口，在其中判断bean对象的脑袋上是否有该注解，如果有，你可以对这个bean实例执行任何操作，想想是不是非常的简单？
+##### BeanPostProcessor 示例一----自定义注解
 
-再来看一个更常见的例子，在Spring中经常能够看到各种各样的**Aware接口**，其作用就是在对象实例化完成以后将Aware接口定义中规定的依赖注入到当前实例中。比如最常见的ApplicationContextAware接口，实现了这个接口的类都可以获取到一个ApplicationContext对象。当容器中每个对象的实例化过程走到BeanPostProcessor前置处理这一步时，容器会检测到之前注册到容器的ApplicationContextAwareProcessor，然后就会调用其postProcessBeforeInitialization()方法，检查并设置Aware相关依赖。看看代码吧，是不是很简单：
+比如有一个自定义注解，你完全可以实现BeanPostProcessor的接口，在其中判断bean对象的外部是否有该注解，如果有，你可以对这个bean实例执行任何操作。
+
+##### BeanPostProcessor 示例二----Aware接口
+
+再来看一个更常见的例子，在Spring中经常能够看到各种各样的**Aware接口**，其作用就是在对象实例化完成以后将Aware接口定义中规定的依赖注入到当前实例中。比如最常见的ApplicationContextAware接口，实现了这个接口的类都可以获取到一个ApplicationContext对象。
+
+当容器中每个对象的实例化过程走到BeanPostProcessor前置处理这一步时，容器会检测到之前注册到容器的ApplicationContextAwareProcessor，然后就会调用其postProcessBeforeInitialization()方法，检查并设置Aware相关依赖。
+
 ```java
 // 代码来自：org.springframework.context.support.ApplicationContextAwareProcessor
 // 其postProcessBeforeInitialization方法调用了invokeAwareInterfaces方法
@@ -134,7 +193,10 @@ private void invokeAwareInterfaces(Object bean) {
     // ......
 }
 ```
-## JavaConfig与常见Annotation
+
+
+## JavaConfig & 常见Annotation
+
 ### JavaConfig
 下面是使用XML配置方式来描述bean的定义：
 ```xml
@@ -189,7 +251,10 @@ public class MoonBookConfiguration {
     }
 }
 ```
+
+
 ### @ComponentScan
+
 ### @Import
 ### @Conditional
 ### @ConfigurationProperties与@EnableConfigurationProperties
@@ -291,13 +356,22 @@ public class AppProperties {
 }
 ```
 
+
+
+
+
 ## SpringFactoriesLoader详解
-JVM分别提供了三种类加载器
+
+### JVM三种类加载器
+
 * BootStrapClassLoader  ——>   Java核心类库
 * ExtClassLoader              ——>   Java扩展类库
 * AppClassLoader            ——>   应用的类路径CLASSPATH下的类库
 
+### 双亲委派模型简介
+
 JVM通过**双亲委派模型**进行类的加载，我们也可以通过继承java.lang.classloader实现自己的类加载器。
+
 ```
 当一个类加载器收到类加载任务时，会先交给自己的父加载器去完成，因此最终加载任务都会传递到最顶层的BootstrapClassLoader，只有当父加载器无法完成加载任务时，才会尝试自己来加载。
 ```
@@ -332,12 +406,21 @@ protected Class<?> loadClass(String name, boolean resolve) {
 }
 ```
 
-但**双亲委派模型并不能解决所有的类加载器问题**，比如，Java 提供了很多服务提供者接口(Service Provider Interface，SPI)，允许第三方为这些接口提供实现。常见的 SPI 有 JDBC、JNDI、JAXP 等，这些SPI的接口由核心类库提供，却由第三方实现，这样就存在一个问题：SPI 的接口是 Java 核心库的一部分，是由BootstrapClassLoader加载的；SPI实现的Java类一般是由AppClassLoader来加载的。BootstrapClassLoader是无法找到 SPI 的实现类的，因为它只加载Java的核心库。它也不能代理给AppClassLoader，因为它是最顶层的类加载器。也就是说，双亲委派模型并不能解决这个问题。
+### 双亲委派弊端
 
-// todo 
+但**双亲委派模型并不能解决所有的类加载器问题**。
 
-**线程上下文类加载器(ContextClassLoader)**正好解决了这个问题。从名称上看，可能会误解为它是一种新的类加载器，实际上，它仅仅是Thread类的一个变量而已，可以通过setContextClassLoader(ClassLoader cl)和getContextClassLoader()来设置和获取该对象。如果不做任何的设置，Java应用的线程的上下文类加载器默认就是AppClassLoader。在核心类库使用SPI接口时，传递的类加载器使用线程上下文类加载器，就可以成功的加载到SPI实现的类。线程上下文类加载器在很多SPI的实现中都会用到。但在JDBC中，你可能会看到一种更直接的实现方式，比如，JDBC驱动管理java.sql.Driver中的loadInitialDrivers()方法中，你可以直接看到JDK是如何加载驱动的：
-```
+比如，Java 提供了很多服务提供者接口(Service Provider Interface，SPI)，允许第三方为这些接口提供实现。常见的 SPI 有 JDBC、JNDI、JAXP 等。
+
+SPI的接口由核心类库提供，却由第三方实现，这样就存在一个问题：SPI 的接口是 Java 核心库的一部分，是由BootstrapClassLoader加载的；SPI实现的Java类一般是由AppClassLoader来加载的。BootstrapClassLoader是无法找到 SPI 的实现类的，因为它只加载Java的核心库。它也不能代理给AppClassLoader，因为它是最顶层的类加载器。也就是说，双亲委派模型并不能解决这个问题。
+
+### 双亲委派弊端解决方案ContextClassLoader
+
+**线程上下文类加载器(ContextClassLoader)**正好解决了这个问题。从名称上看，可能会误解为它是一种新的类加载器，实际上，它仅仅是Thread类的一个变量而已，可以通过setContextClassLoader(ClassLoader cl)和getContextClassLoader()来设置和获取该对象。
+
+如果不做任何的设置，Java应用的线程的上下文类加载器默认就是AppClassLoader。在核心类库使用SPI接口时，传递的类加载器使用线程上下文类加载器，就可以成功的加载到SPI实现的类。线程上下文类加载器在很多SPI的实现中都会用到。但在JDBC中，你可能会看到一种更直接的实现方式，比如，JDBC驱动管理java.sql.Driver中的loadInitialDrivers()方法中，你可以直接看到JDK是如何加载驱动的：
+
+```java
 for (String aDriver : driversList) {
     try {
         // 直接使用AppClassLoader
@@ -347,10 +430,12 @@ for (String aDriver : driversList) {
     }
 }
 ```
-其实讲解线程上下文类加载器，最主要是让大家在看到Thread.currentThread().getClassLoader()和Thread.currentThread().getContextClassLoader()时不会一脸懵逼，这两者除了在许多底层框架中取得的ClassLoader可能会有所不同外，其他大多数业务场景下都是一样的，大家只要知道它是为了解决什么问题而存在的即可。
+其实讲解线程上下文类加载器，最主要是让大家在看到`Thread.currentThread().getClassLoader()`和`Thread.currentThread().getContextClassLoader()`时不会一脸懵逼，这两者除了在许多底层框架中取得的ClassLoader可能会有所不同外，其他大多数业务场景下都是一样的。
 
+### 类加载器的另外一个重要功能：加载资源
 
 类加载器除了加载class外，还有一个非常重要功能，就是加载资源，它可以从jar包中读取任何资源文件，比如，**ClassLoader.getResources(String name)方法就是用于读取jar包中的资源文件**，其代码如下：
+
 ```Java
 public Enumeration<URL> getResources(String name) throws IOException {
     Enumeration<URL>[] tmp = (Enumeration<URL>[]) new Enumeration<?>[2];
@@ -388,7 +473,8 @@ $JAVA_HOME/jre/lib/rt.jar!/java/sql/Array.class
 
 根据资源文件的URL，可以构造相应的文件来读取资源内容。
 
-详解**SpringFactoriesLoader**源码：
+### 详解**SpringFactoriesLoader**源码
+
 ```java
 public static final String FACTORIES_RESOURCE_LOCATION = "META-INF/spring.factories";
 // spring.factories文件的格式为：key=value1,value2,value3
@@ -411,7 +497,7 @@ public static List<String> loadFactoryNames(Class<?> factoryClass, ClassLoader c
     return result;
 }
 ```
-有了前面关于ClassLoader的知识，再来理解这段代码，是不是感觉豁然开朗：从CLASSPATH下的每个Jar包中搜寻所有META-INF/spring.factories配置文件，然后将解析properties文件，找到指定名称的配置后返回。需要注意的是，其实这里不仅仅是会去ClassPath路径下查找，会扫描所有路径下的Jar包，只不过这个文件只会在Classpath下的jar包中。来简单看下spring.factories文件的内容吧：
+有了前面关于ClassLoader的知识，再来理解这段代码：从CLASSPATH下的每个Jar包中搜寻所有META-INF/spring.factories配置文件，然后将解析properties文件，找到指定名称的配置后返回。需要注意的是，其实这里不仅仅是会去ClassPath路径下查找，会扫描所有路径下的Jar包，只不过这个文件只会在Classpath下的jar包中。来简单看下spring.factories文件的内容吧：
 
 ```properties
 // 来自 org.springframework.boot.autoconfigure下的META-INF/spring.factories
