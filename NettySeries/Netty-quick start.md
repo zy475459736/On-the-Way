@@ -6,7 +6,7 @@ BIO&伪BIO
 
 > 前者是典型的一请求一应答通信模型，缺乏弹性伸缩能力，在并发数膨胀后基本就崩了。
 >
-> 后者是在前者模型的基础上，增加了一线程池，保证服务器机器本身的性能，但是并发数膨胀后，吞吐依旧不好。
+> 后者是在前者模型的基础上，增加了一线程池，通过限制程序所用的线程总数来保证服务器机器本身的性能，但是并发数膨胀后，吞吐依旧较低，客户端的体验依旧无法保证。
 >
 > 最大性能瓶颈在于：Java网络编程中所使用的Stream，它自身是阻塞的（细节另行探讨）。
 
@@ -36,13 +36,12 @@ NIO2.0的异步套接字通道是真正的异步非阻塞IO，对应UNIX网络�
 
 ## 服务端
 
-### NIO类库
+### JDK NIO类库
 
 直接使用JDK NIO的类库开发基于NIO的异步服务端时，需要使用到：
 
 * Selector
-* ServerSocketChannel
-* SocketChannel
+* ServerSocketChannel/SocketChannel
 * ByteBuffer
 * SelectionKey
 
@@ -60,11 +59,19 @@ NIO2.0的异步套接字通道是真正的异步非阻塞IO，对应UNIX网络�
 
 **ServerBootStrap只有一个无参的构造函数，采用Builder模式来进行相关的初始化。**
 
+![](https://github.com/zy475459736/markdown-pics/blob/master/Netty/Server-Client%20Bootstrap.png?raw=true)
+
 
 
 #### EventLoopGroup
 
 > 类比Reactor模式中的线程池，它实际是EventLoop的数组。
+
+![](https://github.com/zy475459736/markdown-pics/blob/master/Netty/EventLoopGroup.png?raw=true)
+
+
+
+
 
 ##### EventLoop
 
@@ -73,6 +80,8 @@ NIO2.0的异步套接字通道是真正的异步非阻塞IO，对应UNIX网络�
 EventLoop的职责是处理所有注册到本线程多路复用器Selector上的Channel，Selector的轮询操作由绑定的EventLoop线程run方法驱动，在一个循环体内循环执行。
 
 除了网络IO事件外，同时还处理用户自定义的Task和定时任务Task。
+
+![](https://github.com/zy475459736/markdown-pics/blob/master/Netty/NioEventLoop.png?raw=true)
 
 
 
@@ -83,6 +92,8 @@ EventLoop的职责是处理所有注册到本线程多路复用器Selector上的
 用户并不关系底层的实现细节和工作原理，因此只需通过ServerBootStrap的channel方法直接制定服务端Channel的类型即可。
 
 Netty通过工厂类，利用反射完成Channel对象的创建。
+
+![](https://github.com/zy475459736/markdown-pics/blob/master/Netty/NioServerSocketChannel.png?raw=true)
 
 
 
@@ -140,6 +151,37 @@ Netty通过工厂类，利用反射完成Channel对象的创建。
 #### ChannelHandler的调度并执行
 
 Netty系统ChannelHandler和用户定制ChannelHandler的执行。
+
+
+
+
+
+## Netty服务端源码分析
+
+![](https://github.com/zy475459736/markdown-pics/blob/master/Netty/Server-Client%20Bootstrap.png?raw=true)
+
+
+
+ServerBootStrap.group()传入两个NioEventLoopGroup，其中bossGroup传入AbstractBootStrap构造函数中。workerGroup传入ServerBootStrap中。
+
+BootstrapChannelFactory是AbstractBootstrap的静态内部类，职责是根据Channel的类型通过反射创建Channel的实例。
+
+制定NioServerSocketChannel后，需要设置TCP的一些参数，作为服务端，主要是设置TCP的backlog参数，该参数制定了内核为此套接口排队的最大连接个数，Netty默认是100，可以修改。
+
+TCP参数设置完成后，可以为启动辅助类及其父类分别制定Handler：
+
+* 子类中Handler是NioServerSocketChannel对应ChannelPipeline的Handler
+* 父类中Handler是客户端新接入的连接SocketChannel对应的ChannelPipeline的Handler
+
+本质区别就是：ServerBootstrap中的Handler是NioServerSocketChannel使用的，所有连接该监听端口的客户端都会执行它，父类AbstractBootstrap中的Handler是个工厂类，为每个新接入的客户端都创建一个新的Handler。
+
+服务端启动的最后一步，就是绑定本地端口，启动服务：
+
+![](https://github.com/zy475459736/markdown-pics/blob/master/Netty/NettyServer00.png?raw=true)
+
+![](https://github.com/zy475459736/markdown-pics/blob/master/Netty/NettyServer01.png?raw=true)
+
+![](https://github.com/zy475459736/markdown-pics/blob/master/Netty/NettyServer02.png?raw=true)
 
 
 
