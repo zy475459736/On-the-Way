@@ -252,12 +252,94 @@ public class MoonBookConfiguration {
 }
 ```
 
-
 ### @ComponentScan
 
+`@ComponentScan`注解对应XML配置形式中的`<context:component-scan>`元素，表示启用组件扫描，Spring会自动扫描所有通过注解配置的bean，然后将其注册到IOC容器中。
+
+我们可以通过`basePackages`等属性来指定`@ComponentScan`自动扫描的范围。如果不指定，默认从声明`@ComponentScan`所在类的`package`进行扫描。正因为如此，SpringBoot的启动类都默认在`src/main/java`下。
+
 ### @Import
+
+现在有另外一个配置类，比如：`MoonUserConfiguration`，这个配置类中有一个bean依赖于`MoonBookConfiguration`中的bookService，如何将这两个bean组合在一起？借助`@Import`即可：
+
+```java
+@Configuration
+// 可以同时导入多个配置类，比如：@Import({A.class,B.class})
+@Import(MoonBookConfiguration.class)
+public class MoonUserConfiguration {
+    @Bean
+    public UserService userService(BookService bookService) {
+        return new BookServiceImpl(bookService);
+    }
+}
+```
+
+需要注意的是，在4.2之前，`@Import`注解只支持导入配置类，但是在4.2之后，它支持导入普通类，并将这个类作为一个bean的定义注册到IOC容器中。
+
 ### @Conditional
+
+`@Conditional`注解表示<u>在满足某种条件后才初始化一个bean或者启用某些配置</u>。
+
+它一般用在由`@Component`、`@Service`、`@Configuration`等注解标识的类上面，或者由`@Bean`标记的方法上。
+
+如果一个`@Configuration`类标记了`@Conditional`，则该类中所有标识了`@Bean`的方法和`@Import`注解导入的相关类将遵从这些条件。
+
+在Spring里可以很方便的编写你自己的条件类，所要做的就是实现`Condition`接口，并覆盖它的`matches()`方法。举个例子，下面的简单条件类表示只有在`Classpath`里存在`JdbcTemplate`类时才生效：
+
+```java
+public class JdbcTemplateCondition implements Condition {
+
+    @Override
+    public boolean matches(ConditionContext conditionContext, AnnotatedTypeMetadata annotatedTypeMetadata) {
+        try {
+      		conditionContext.getClassLoader()
+          				   .loadClass("org.springframework.jdbc.core.JdbcTemplate");
+            return true;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+}
+```
+
+当你用Java来声明bean的时候，可以使用这个自定义条件类：
+
+```java
+@Conditional(JdbcTemplateCondition.class)
+@Service
+public MyService service() {
+    ......
+}
+```
+
+这个例子中只有当`JdbcTemplateCondition`类的条件成立时才会创建MyService这个bean。也就是说MyService这bean的创建条件是`classpath`里面包含`JdbcTemplate`，否则这个bean的声明就会被忽略掉。
+
+
+
+`Spring Boot`定义了很多有趣的条件，并把他们运用到了配置类上，这些配置类构成了`Spring Boot`的自动配置的基础。
+
+`Spring Boot`运用条件化配置的方法是：定义多个特殊的条件化注解，并将它们用到配置类上。下面列出了`Spring Boot`提供的部分条件化注解：
+
+| 条件化注解                      | 配置生效条件                                         |
+| ------------------------------- | ---------------------------------------------------- |
+| @ConditionalOnBean              | 配置了某个特定bean                                   |
+| @ConditionalOnMissingBean       | 没有配置特定的bean                                   |
+| @ConditionalOnClass             | Classpath里有指定的类                                |
+| @ConditionalOnMissingClass      | Classpath里没有指定的类                              |
+| @ConditionalOnExpression        | 给定的Spring Expression Language表达式计算结果为true |
+| @ConditionalOnJava              | Java的版本匹配特定指或者一个范围值                   |
+| @ConditionalOnProperty          | 指定的配置属性要有一个明确的值                       |
+| @ConditionalOnResource          | Classpath里有指定的资源                              |
+| @ConditionalOnWebApplication    | 这是一个Web应用程序                                  |
+| @ConditionalOnNotWebApplication | 这不是一个Web应用程序                                |
+
 ### @ConfigurationProperties与@EnableConfigurationProperties
+
+当某些属性的值需要配置的时候：
+
+**我们一般会在`application.properties`文件中新建配置项，然后在bean中使用`@Value`注解来获取配置的值**
+
 ```properties
 // jdbc config
 jdbc.mysql.url=jdbc:mysql://localhost:3306/sampledb
@@ -358,8 +440,6 @@ public class AppProperties {
 
 
 
-
-
 ## SpringFactoriesLoader详解
 
 ### JVM三种类加载器
@@ -416,9 +496,11 @@ SPI的接口由核心类库提供，却由第三方实现，这样就存在一�
 
 ### 双亲委派弊端解决方案ContextClassLoader
 
-**线程上下文类加载器(ContextClassLoader)**正好解决了这个问题。从名称上看，可能会误解为它是一种新的类加载器，实际上，它仅仅是Thread类的一个变量而已，可以通过setContextClassLoader(ClassLoader cl)和getContextClassLoader()来设置和获取该对象。
+**线程上下文类加载器(ContextClassLoader)**正好解决了这个问题。从名称上看，可能会误解为它是一种新的类加载器，实际上，它仅仅是**Thread类的一个变量**而已，可以通过setContextClassLoader(ClassLoader cl)和getContextClassLoader()来设置和获取该对象。
 
-如果不做任何的设置，Java应用的线程的上下文类加载器默认就是AppClassLoader。在核心类库使用SPI接口时，传递的类加载器使用线程上下文类加载器，就可以成功的加载到SPI实现的类。线程上下文类加载器在很多SPI的实现中都会用到。但在JDBC中，你可能会看到一种更直接的实现方式，比如，JDBC驱动管理java.sql.Driver中的loadInitialDrivers()方法中，你可以直接看到JDK是如何加载驱动的：
+如果不做任何的设置，**Java应用的线程的上下文类加载器默认就是AppClassLoader**。在核心类库使用SPI接口时，传递的类加载器使用ContextClassLoader，就可以成功的加载到SPI实现的类。
+
+ContextClassLoader在很多SPI的实现中都会用到。但在JDBC中，你可能会看到一种更直接的实现方式，比如，JDBC驱动管理java.sql.Driver中的loadInitialDrivers()方法中，你可以直接看到JDK是如何加载驱动的：
 
 ```java
 for (String aDriver : driversList) {
@@ -434,7 +516,7 @@ for (String aDriver : driversList) {
 
 ### 类加载器的另外一个重要功能：加载资源
 
-类加载器除了加载class外，还有一个非常重要功能，就是加载资源，它可以从jar包中读取任何资源文件，比如，**ClassLoader.getResources(String name)方法就是用于读取jar包中的资源文件**，其代码如下：
+类加载器除了加载class外，还有一个非常重要功能，就是加载资源，它可以从jar包中读取任何资源文件，比如，**ClassLoader.getResources(String name)方法就是用于读取jar包中的资源文件**：
 
 ```Java
 public Enumeration<URL> getResources(String name) throws IOException {
@@ -515,7 +597,7 @@ org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration\
 在服务器端，事件的监听机制更多的用于***异步通知***以及***监控和异常处理***。
 
 Java提供了实现事件监听机制的两个基础类：
-* java.util.EventObject  自定义事件类型
+* java.util.EventObject    自定义事件类型
 * java.util.EventListener  事件的监听器
 
 同时还需要注意  EventPublisher 事件发布者
@@ -660,7 +742,7 @@ public @interface SpringBootApplication {
     // ......
 }
 ```
-以下三个注解起到关键作用：
+以下**三个注解起到关键作用**：
 * @SpringBootConfiguration       
     *  就是@Configuration，它是Spring框架的注解，标明该类是一个JavaConfig配置类
 * @ComponentScan
@@ -742,6 +824,8 @@ public class DataSourcePoolMetadataProvidersConfiguration {
 }
 ```
 DataSourcePoolMetadataProvidersConfiguration是数据库连接池提供者的一个配置类，即Classpath中存在org.apache.tomcat.jdbc.pool.DataSource.class，则使用tomcat-jdbc连接池，如果Classpath中存在HikariDataSource.class则使用Hikari连接池。
+
+#### 小结
 
 以上足以说明**Spring Boot如何利用条件话配置来实现自动配置**的。
 
