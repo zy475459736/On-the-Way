@@ -914,7 +914,7 @@ ConfigurableApplicationContext继承自ApplicationContext，其主要提供了�
 
 > 如果想为Spring Boot应用添加监听器，该如何实现？
 >
-> Spring Boot提供两种方式来添加自定义监听器：
+> Spring Boot提供以下方式来添加自定义监听器：
 >
 > * 通过SpringApplication.addListeners(ApplicationListener<?>... listeners)
 > * SpringApplication.setListeners(Collection<? extends ApplicationListener<?>> listeners)两个方法来添加一个或者多个自定义监听器
@@ -979,7 +979,7 @@ public ConfigurableApplicationContext run(String... args) {
 ```
 ① 通过SpringFactoriesLoader查找并加载所有的SpringApplicationRunListeners，通过调用starting()方法通知所有的SpringApplicationRunListeners：应用开始启动了。
 
-SpringApplicationRunListeners其本质上就是一个事件发布者，它在SpringBoot应用启动的不同时间点发布不同应用事件类型(ApplicationEvent)，如果有哪些事件监听者(ApplicationListener)对这些事件感兴趣，则可以接收并且处理。还记得初始化流程中，SpringApplication加载了一系列ApplicationListener吗？这个启动流程中没有发现有发布事件的代码，其实都已经在SpringApplicationRunListeners这儿实现了。
+**SpringApplicationRunListeners其本质上就是一个事件发布者**，它在SpringBoot应用启动的不同时间点发布不同应用事件类型(ApplicationEvent)，如果有哪些事件监听者(ApplicationListener)对这些事件感兴趣，则可以接收并且处理。还记得初始化流程中，SpringApplication加载了一系列ApplicationListener吗？这个启动流程中没有发现有发布事件的代码，其实都已经在SpringApplicationRunListeners这儿实现了。
 
 简单的分析一下其实现流程，首先看下SpringApplicationRunListener的源码：
 ```java
@@ -1308,7 +1308,7 @@ SpringApplication启动后，如果我们想实现自己的逻辑，便可以通
 
 只要理解这些扩展点是在何时如何工作的，能让它们为你所用即可。
 
-言而总之，Spring才是核心，理解清楚Spring容器的启动流程，那Spring Boot启动流程就不在话下了。
+Spring才是核心，理解清楚Spring容器的启动流程，那Spring Boot启动流程就不在话下了。
 
 
 
